@@ -1,0 +1,14 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+httpx>=0.27
+pydantic>=2.6
+python-multipart>=0.0.9
+# local, offline providers (no cloud, no keys)
+faster-whisper>=1.0    # local STT
+piper-tts>=1.2         # local TTS
+psutil>=5.9    # resource_monitor tool
+# Create workspace — local document export
+python-docx>=1.1
+python-pptx>=0.6
+openpyxl>=3.1
+fpdf2>=2.7

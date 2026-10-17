@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Sign in · Abrar AI Hub</title>
+<style>
+  :root{--teal:#15c6a6;--teal2:#0fae8f;--green:#12b886;--green-d:#0ca678;--ink:#0b2545;
+        --muted:#6a89a6;--blue:#1c5fb0;--line:#e2eef0}
+  *{box-sizing:border-box}html,body{height:100%;margin:0}
+  body{font-family:'Segoe UI',system-ui,Roboto,sans-serif;color:var(--ink);display:flex;
+       align-items:center;justify-content:center;overflow:hidden;position:relative;
+       background:linear-gradient(160deg,var(--teal),var(--teal2) 55%,#0c9a7e)}
+  .decor{position:fixed;inset:0;overflow:hidden;pointer-events:none}
+  .orb{position:absolute;border-radius:50%;background:#fff;filter:blur(2px)}
+  .card{position:relative;z-index:2;width:400px;max-width:93vw;background:#fff;border-radius:26px;
+        padding:32px;box-shadow:0 24px 60px rgba(6,60,50,.28)}
+  .brand{text-align:center;font-weight:800;font-size:22px}.brand .b{color:var(--blue)}.brand .g{color:var(--green)}
+  .tag{color:var(--muted);font-size:12px;text-align:center;margin:4px 0 18px}
+  h2{font-size:18px;margin:0 0 14px}
+  input{width:100%;padding:13px;border:1.5px solid var(--line);border-radius:12px;font-size:15px;margin:7px 0;color:var(--ink);background:#f8fbfc}
+  input:focus{outline:none;border-color:var(--green);background:#fff}
+  button.primary{width:100%;margin-top:12px;padding:13px;border:0;border-radius:12px;background:var(--green);
+        color:#fff;font-weight:800;font-size:15px;cursor:pointer}
+  button.primary:hover{background:var(--green-d)}
+  .alt{display:flex;gap:8px;margin-top:12px}
+  .alt button{flex:1;padding:11px;border:1.5px solid var(--line);border-radius:11px;background:#fff;color:var(--blue);font-weight:700;cursor:pointer;font-size:13px}
+  .alt button:hover{border-color:var(--green)}
+  .links{text-align:center;margin-top:14px;font-size:13px}.links a{color:var(--blue);cursor:pointer;font-weight:700}
+  .err{color:#e03131;font-size:13px;text-align:center;min-height:16px;margin-top:8px}
+  .keybox{background:#eefaf6;border:1px solid #b6e6d5;border-radius:12px;padding:14px;margin-top:12px;display:none}
+  .keybox code{display:block;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px;
+        font-size:13px;word-break:break-all;margin:8px 0;color:var(--ink)}
+  .keybox b{color:var(--green-d)} .foot{text-align:center;color:var(--muted);font-size:11px;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="decor" id="decor"></div>
+<div class="card">
+  <div class="brand">◆ Abrar <span class="g">AI</span> <span class="b">Hub</span></div>
+  <div class="tag">Private · offline · synced across your devices</div>
+  <h2 id="heading">Sign in</h2>
+
+  <div id="form">
+    <input id="u" placeholder="Username" autocomplete="username"/>
+    <input id="p" type="password" placeholder="Password" autocomplete="current-password"/>
+    <button class="primary" id="go">Sign in</button>
+  </div>
+
+  <div id="keyform" style="display:none">
+    <input id="k" placeholder="Paste your account key"/>
+    <button class="primary" id="goKey">Log in with key</button>
+  </div>
+
+  <div class="err" id="err"></div>
+
+  <div class="keybox" id="keybox">
+    🔑 <b>Save this account key</b> — use it to log in on your other devices (no password needed):
+    <code id="keyval"></code>
+    <button class="primary" onclick="location.href='/'">I saved it — continue</button>
+  </div>
+
+  <div class="alt">
+    <button onclick="setMode('key')" id="btnKey">🔑 Use device key</button>
+    <button onclick="doGuest()">👤 Continue as guest</button>
+  </div>
+  <div class="links" id="switch"></div>
+  <div class="foot">🔒 Accounts stored locally · data syncs over your Tailscale network.</div>
+</div>
+<script>
+const $=s=>document.querySelector(s); let mode='login', firstRun=false;
+(function(){const d=$('#decor');for(let i=0;i<12;i++){const o=document.createElement('div');o.className='orb';
+  const s=30+Math.random()*80;o.style.width=o.style.height=s+'px';o.style.left=(Math.random()*100)+'%';
+  o.style.top=(45+Math.random()*52)+'%';o.style.opacity=(.06+Math.random()*.1);d.appendChild(o);}})();
+
+fetch('/api/auth/status').then(r=>r.json()).then(s=>{firstRun=!s.registered;setMode(firstRun?'register':'login');});
+
+function setMode(m){mode=m;
+  $('#form').style.display=(m==='key')?'none':'block';
+  $('#keyform').style.display=(m==='key')?'block':'none';
+  $('#heading').textContent=m==='register'?(firstRun?'Create admin account':'Create account'):(m==='key'?'Log in with key':'Sign in');
+  $('#go').textContent=m==='register'?'Create account':'Sign in';
+  $('#err').textContent='';$('#keybox').style.display='none';
+  const sw=$('#switch');
+  if(firstRun&&m==='register'){sw.innerHTML='';$('#btnKey').style.display='none';}
+  else sw.innerHTML = m==='key' ? `<a onclick="setMode('login')">← back to sign in</a>`
+      : (m==='login'? `New here? <a onclick="setMode('register')">Create an account</a>`
+                    : `Have an account? <a onclick="setMode('login')">Sign in</a>`);
+}
+async function post(url,body){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});return {ok:r.ok,d:await r.json()};}
+async function submit(){const u=$('#u').value.trim(),p=$('#p').value;if(!u||!p){$('#err').textContent='Enter a username and password.';return;}
+  $('#go').disabled=true;const {ok,d}=await post('/api/auth/'+(mode==='register'?'register':'login'),{username:u,password:p});$('#go').disabled=false;
+  if(!ok){$('#err').textContent=d.detail||'Failed.';return;}
+  if(d.account_key){showKey(d.account_key);}else location.href='/';}
+async function loginKey(){const k=$('#k').value.trim();if(!k)return;const {ok,d}=await post('/api/auth/login-key',{key:k});
+  if(ok)location.href='/';else $('#err').textContent=d.detail||'Invalid key.';}
+async function doGuest(){const {ok,d}=await post('/api/auth/guest',{});if(ok){showKey(d.account_key,true);}}
+function showKey(k,guest){$('#keyval').textContent=k;$('#keybox').style.display='block';
+  if(guest)$('#keybox').querySelector('b').textContent='Guest key (save to return to this guest session)';}
+$('#go').onclick=submit;$('#goKey').onclick=loginKey;
+$('#p').addEventListener('keydown',e=>{if(e.key==='Enter')submit();});
+$('#k').addEventListener('keydown',e=>{if(e.key==='Enter')loginKey();});
+</script>
+</body>
+</html>

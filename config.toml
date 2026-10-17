@@ -1,0 +1,98 @@
+# Copy to config.toml. Fully local & offline — no API keys, no cloud, nothing to rotate.
+# Every provider below runs against local Ollama or a local model file under data/.
+
+[server]
+host = "127.0.0.1"
+port = 8100
+
+[storage]
+db_url = "sqlite:///data/suite.db"
+
+# ---- Provider chains. All local. Tried top to bottom. -----------------------
+
+# Text generation — local Ollama. fallback_model kicks in if the primary won't
+# fit in RAM. Use any model you have pulled (`ollama list`).
+[providers.llm]
+chain = [
+  { provider = "ollama", options = { model = "llama3.2:1b", fallback_model = "gemma3:1b" } },
+]
+
+# Embeddings for RAG — local Ollama. Pull once: `ollama pull nomic-embed-text`.
+[providers.embed]
+chain = [
+  { provider = "ollama", options = { model = "nomic-embed-text" } },
+]
+
+# Vision — local image understanding via Ollama. Needs a vision model pulled
+# (`ollama pull granite3.2-vision:2b`, or llava).
+[providers.vision]
+chain = [
+  { provider = "ollama", options = { model = "granite3.2-vision:2b" } },
+]
+
+# Speech-to-text — local faster-whisper. Weights cache under data/whisper.
+[providers.stt]
+chain = [
+  { provider = "whisper", options = { model_size = "tiny", compute_type = "int8" } },
+]
+
+# Text-to-speech — local Piper. Point at a downloaded .onnx voice (+ .onnx.json).
+[providers.tts]
+chain = [
+  { provider = "piper", options = { voice_path = "data/voices/en_US-amy-low.onnx" } },
+]
+
+# n8n outbound webhooks — the hub POSTs {event, data} to these URLs when events
+# fire (task.done, crew.done, meeting.saved; use event="*" for all). Off by default.
+[n8n]
+enabled = false
+# [[n8n.webhooks]]
+# event = "task.done"
+# url = "http://localhost:5678/webhook/task-done"
+
+# Meetings are hosted by the suite itself. By default a meeting runs on the copy
+# of the suite on the host's own machine (local_host). An org whose hardware can't
+# cope runs THE SAME suite on a stronger box (e.g. a cloud VM) and sets hosted_url;
+# meetings created with host_backend != "local" point joiners at that address. It's
+# the same app on different hardware, not a separate meeting service.
+[meetings]
+local_host = "http://127.0.0.1:8100"
+hosted_url = ""
+
+# Agent swarm (P4). Reads the 43 SKILL.md agents; runs a local ReAct loop with
+# sandboxed tools. Shell runs in Docker (no network) when available.
+# Create workspace — model used for structured generation (slides/sheets JSON).
+[create]
+model = "qwen2.5-coder:3b"
+
+# Crew — multi-agent "AI coworkers". The manager model plans the work; the
+# reporter agent writes the final deliverable. Bigger model = richer output.
+[crew]
+model = "qwen2.5-coder:3b"
+reporter = "42-final-reporter"
+max_steps = 3
+
+# Authentication. Off by default (local single-user). Set required = true to make
+# routes that depend on it demand a valid login token. secret is auto-generated and
+# persisted to data/auth_secret.key if left blank.
+[auth]
+required = false
+secret = ""
+
+# Core system preset — base behavior prepended to the conversational path.
+# Edit suite/prompts/core_preset.md (or point elsewhere) to retune every model.
+[prompts]
+core_preset = "suite/prompts/core_preset.md"
+
+[agents]
+skills_dir = "~/.gemini/antigravity/skills"
+swarm_root = "~/Workspace/Documents/openmanus/Abraraiv2"
+model = "qwen2.5-coder:1.5b"   # follows the ReAct tool format far better than tiny models
+max_steps = 6
+
+[council]
+classifier = "llama3.2:1b"
+[council.routes]
+code = "qwen2.5-coder:1.5b"
+reasoning = "deepseek-r1:1.5b"
+general = "llama3.2:1b"

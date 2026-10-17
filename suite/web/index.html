@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abrar AI Hub</title>
+<style>
+  :root{
+    --bg:#0a0a0a; --panel:#141414; --panel2:#1b1b1b; --line:#262626;
+    --ink:#e8e8e8; --soft:#8a8a8a; --red:#ef4444; --green:#10b981;
+    --mono:ui-monospace,"Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);height:100vh;display:flex;flex-direction:column}
+  header{display:flex;align-items:center;gap:12px;padding:0 18px;height:52px;border-bottom:1px solid var(--line);background:#000}
+  header .brand{font-weight:700;letter-spacing:-.01em}
+  header .brand b{color:var(--red)}
+  header .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  header .meta{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--soft)}
+  nav{display:flex;gap:2px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+  nav button{font-family:var(--mono);font-size:13px;color:var(--soft);background:none;border:none;padding:8px 14px;border-radius:7px;cursor:pointer}
+  nav button.on{color:var(--ink);background:var(--panel2)}
+  nav button:hover{color:var(--ink)}
+  main{flex:1;overflow:hidden;position:relative}
+  .tab{position:absolute;inset:0;display:none;flex-direction:column;padding:16px;gap:12px;overflow:auto}
+  .tab.on{display:flex}
+  .row{display:flex;gap:10px}
+  input,textarea,select{font-family:var(--sans);font-size:14px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
+  textarea{resize:vertical;min-height:60px}
+  button.go{font-family:var(--sans);font-weight:600;background:var(--red);color:#fff;border:none;border-radius:8px;padding:10px 18px;cursor:pointer;white-space:nowrap}
+  button.go:hover{filter:brightness(1.1)}
+  button.ghost{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
+  .msgs{flex:1;display:flex;flex-direction:column;gap:10px;overflow:auto;padding:4px}
+  .msg{max-width:78%;padding:11px 14px;border-radius:12px;line-height:1.5;white-space:pre-wrap;font-size:14px}
+  .msg.user{align-self:flex-end;background:var(--red);color:#fff}
+  .msg.bot{align-self:flex-start;background:var(--panel2);border:1px solid var(--line)}
+  .msg .who{font-family:var(--mono);font-size:10px;opacity:.7;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card h3{margin:0 0 10px;font-size:13px;font-family:var(--mono);color:var(--soft);text-transform:uppercase;letter-spacing:.06em}
+  .out{font-family:var(--mono);font-size:13px;white-space:pre-wrap;background:#000;border:1px solid var(--line);border-radius:8px;padding:12px;min-height:40px;color:#cfcfcf}
+  .src{font-family:var(--mono);font-size:12px;color:var(--green);margin-top:8px}
+  .pill{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;border:1px solid var(--line);color:var(--soft)}
+  .pill.run{color:var(--green);border-color:var(--green)}
+  label{font-family:var(--mono);font-size:11px;color:var(--soft);text-transform:uppercase;letter-spacing:.06em}
+</style>
+</head>
+<body>
+<header>
+  <span class="dot"></span>
+  <span class="brand">Abrar <b>AI</b> Hub</span>
+  <span class="meta" id="meta">local · connecting…</span>
+</header>
+<nav>
+  <button class="on" data-tab="chat">Chat</button>
+  <button data-tab="crew">Crew</button>
+  <button data-tab="vault">Vault</button>
+  <button data-tab="know">Knowledge</button>
+  <button data-tab="swarm">Swarm</button>
+</nav>
+<main>
+  <!-- CHAT -->
+  <section class="tab on" id="chat">
+    <div class="msgs" id="msgs"></div>
+    <div class="row">
+      <textarea id="chatIn" placeholder="Ask anything — runs on your local models…" rows="1"></textarea>
+      <button class="go" id="chatSend">Send</button>
+    </div>
+  </section>
+
+  <!-- CREW (AI coworkers) -->
+  <section class="tab" id="crew">
+    <div class="card">
+      <h3>Crew — your AI coworkers</h3>
+      <p style="color:var(--soft);font-size:13px;margin:0 0 10px">Give the team a goal. A manager splits the work, coworkers do their parts, a reporter delivers.</p>
+      <div class="row"><textarea id="crewGoal" placeholder="e.g. Draft a study plan for learning Python in two weeks…"></textarea></div>
+      <div class="row" style="margin-top:8px"><button class="go" id="crewRun">Assemble crew</button><span class="pill" id="crewStatus"></span><span class="pill" id="crewCount"></span></div>
+    </div>
+    <div class="card" id="crewPlanCard" style="display:none">
+      <h3>Who's on it</h3>
+      <div id="crewPlan"></div>
+    </div>
+    <div class="card" id="crewStepsCard" style="display:none">
+      <h3>Coworker contributions</h3>
+      <div id="crewSteps"></div>
+    </div>
+    <div class="card" id="crewResultCard" style="display:none">
+      <h3>Deliverable</h3>
+      <div class="out" id="crewResult">—</div>
+    </div>
+  </section>
+
+  <!-- VAULT (Obsidian x NotebookLM) -->
+  <section class="tab" id="vault">
+    <div class="card">
+      <h3>Ask your vault — notes + sources together</h3>
+      <div class="row"><input id="vAsk" placeholder="Grounded in everything you've written and added…"><button class="go" id="vAskBtn">Ask</button></div>
+      <div class="out" id="vAns" style="margin-top:10px">—</div>
+      <div class="src" id="vSrc"></div>
+    </div>
+    <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:280px">
+      <h3>Knowledge graph
+        <span class="pill" style="margin-left:8px"><span style="color:var(--green)">●</span> note</span>
+        <span class="pill"><span style="color:var(--red)">■</span> source</span>
+        <span class="pill">— link · ┈ related</span>
+        <button class="go ghost" id="vRefresh" style="float:right;padding:4px 10px;font-size:12px">Refresh</button>
+      </h3>
+      <canvas id="vGraph" style="flex:1;width:100%;background:#000;border:1px solid var(--line);border-radius:8px;cursor:grab"></canvas>
+      <div class="out" id="vPick" style="margin-top:8px;min-height:24px">Click a note to see suggested links.</div>
+    </div>
+  </section>
+
+  <!-- KNOWLEDGE -->
+  <section class="tab" id="know">
+    <div class="card">
+      <h3>Add a source</h3>
+      <div class="row" style="margin-bottom:8px"><input id="docTitle" placeholder="Title"></div>
+      <textarea id="docText" placeholder="Paste text to embed for retrieval…"></textarea>
+      <div class="row" style="margin-top:8px"><button class="go" id="docAdd">Ingest</button><span class="pill" id="docMsg"></span></div>
+    </div>
+    <div class="card">
+      <h3>Ask your sources (RAG)</h3>
+      <div class="row"><input id="askIn" placeholder="Question grounded in your documents…"><button class="go" id="askBtn">Ask</button></div>
+      <div class="out" id="askOut" style="margin-top:10px">—</div>
+      <div class="src" id="askSrc"></div>
+    </div>
+    <div class="card">
+      <h3>Study tools</h3>
+      <div class="row">
+        <button class="go ghost" data-kind="guide">Study guide</button>
+        <button class="go ghost" data-kind="flashcards">Flashcards</button>
+        <button class="go ghost" data-kind="quiz">Quiz</button>
+      </div>
+      <div class="out" id="studyOut" style="margin-top:10px">Ingest a source, then generate.</div>
+    </div>
+  </section>
+
+  <!-- SWARM -->
+  <section class="tab" id="swarm">
+    <div class="card">
+      <h3>Run a swarm agent</h3>
+      <label>Agent</label>
+      <select id="agentSel" style="margin:6px 0 10px"></select>
+      <textarea id="taskIn" placeholder="Task for the agent — it can use sandboxed tools (shell, find, resources, files)…"></textarea>
+      <div class="row" style="margin-top:8px"><button class="go" id="taskRun">Run task</button><span class="pill" id="taskStatus"></span></div>
+      <div class="out" id="taskOut" style="margin-top:10px">—</div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const api = (path, body) => fetch(path, body ? {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)} : {}).then(r=>r.json());
+
+// tabs
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on"); $("#"+b.dataset.tab).classList.add("on");
+});
+
+// health
+api("/health").then(h=>{
+  const p = h.providers;
+  $("#meta").textContent = `local · llm:${p.llm[0]} · stt:${p.stt[0]} · tts:${p.tts[0]}`;
+}).catch(()=>$("#meta").textContent="local · gateway offline");
+
+// chat
+function addMsg(who, text){
+  const d=document.createElement("div"); d.className="msg "+(who==="You"?"user":"bot");
+  d.innerHTML=`<div class="who">${who}</div>`+text.replace(/</g,"&lt;");
+  $("#msgs").appendChild(d); $("#msgs").scrollTop=$("#msgs").scrollHeight;
+}
+async function send(){
+  const t=$("#chatIn").value.trim(); if(!t)return;
+  $("#chatIn").value=""; addMsg("You",t);
+  const th=document.createElement("div"); th.className="msg bot"; th.textContent="…"; $("#msgs").appendChild(th);
+  try{ const r=await api("/v1/chat",{message:t}); th.remove(); addMsg("Assistant",r.text); }
+  catch(e){ th.remove(); addMsg("Assistant","[error: gateway unreachable]"); }
+}
+$("#chatSend").onclick=send;
+$("#chatIn").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}});
+
+// knowledge
+$("#docAdd").onclick=async()=>{
+  const title=$("#docTitle").value.trim()||"Untitled", text=$("#docText").value.trim();
+  if(!text)return; $("#docMsg").textContent="embedding…";
+  const r=await api("/v1/docs",{title,text}); $("#docMsg").textContent=`doc #${r.document_id} · ${r.chunks} chunks`;
+};
+$("#askBtn").onclick=async()=>{
+  const q=$("#askIn").value.trim(); if(!q)return;
+  $("#askOut").textContent="thinking…"; $("#askSrc").textContent="";
+  const r=await api("/v1/docs/ask",{question:q});
+  $("#askOut").textContent=r.answer;
+  $("#askSrc").textContent=(r.sources||[]).map(s=>"["+s.title+"]").join(" ");
+};
+document.querySelectorAll("[data-kind]").forEach(b=>b.onclick=async()=>{
+  $("#studyOut").textContent="generating "+b.dataset.kind+"…";
+  const docs=await api("/v1/docs"); const ids=docs.map(d=>d.id);
+  if(!ids.length){$("#studyOut").textContent="No sources yet — ingest one first.";return;}
+  const r=await api("/v1/study/generate",{kind:b.dataset.kind,doc_ids:ids});
+  $("#studyOut").textContent = r.markdown || JSON.stringify(r.items,null,2);
+});
+
+// crew — AI coworkers
+api("/v1/crew/coworkers").then(a=>{ $("#crewCount").textContent = a.length+" coworkers available"; });
+$("#crewRun").onclick=async()=>{
+  const goal=$("#crewGoal").value.trim(); if(!goal)return;
+  $("#crewStatus").textContent="queued"; $("#crewStatus").className="pill run";
+  $("#crewPlanCard").style.display=$("#crewStepsCard").style.display=$("#crewResultCard").style.display="none";
+  $("#crewPlan").innerHTML=$("#crewSteps").innerHTML=""; $("#crewResult").textContent="—";
+  const {run_id}=await api("/v1/crew/run",{goal});
+  const poll=setInterval(async()=>{
+    const r=await api("/v1/crew/runs/"+run_id);
+    $("#crewStatus").textContent=r.status;
+    if(r.plan.length){
+      $("#crewPlanCard").style.display="block";
+      $("#crewPlan").innerHTML=r.plan.map((p,i)=>`<div class="row" style="align-items:baseline;gap:8px;padding:5px 0;border-top:${i?'1px dashed var(--line)':'none'}"><span class="pill" style="color:var(--green);border-color:var(--green)">${p.agent}</span><span style="font-size:13px;color:var(--soft)">${p.task}</span></div>`).join("");
+    }
+    if(r.steps.length){
+      $("#crewStepsCard").style.display="block";
+      $("#crewSteps").innerHTML=r.steps.map(s=>`<div style="margin-bottom:10px"><div class="pill" style="margin-bottom:4px">${s.agent}</div><div class="out">${(s.output||'').replace(/</g,'&lt;')}</div></div>`).join("");
+    }
+    if(r.status==="done"||r.status==="error"){
+      clearInterval(poll); $("#crewStatus").className="pill";
+      $("#crewResultCard").style.display="block"; $("#crewResult").textContent=r.result||"(no output)";
+    }
+  },3000);
+};
+
+// vault — unified ask
+$("#vAskBtn").onclick=async()=>{
+  const q=$("#vAsk").value.trim(); if(!q)return;
+  $("#vAns").textContent="thinking across your vault…"; $("#vSrc").textContent="";
+  const r=await api("/v1/vault/ask",{question:q});
+  $("#vAns").textContent=r.answer;
+  $("#vSrc").innerHTML=(r.sources||[]).map(s=>{
+    const c=s.kind==="note"?"var(--green)":"var(--red)";
+    return `<span style="color:${c}">${s.kind==="note"?"●":"■"} ${s.title}</span>`;
+  }).join("&nbsp;&nbsp;");
+};
+
+// vault — force-directed knowledge graph on canvas (no libraries)
+const cv=$("#vGraph"), cx=cv.getContext("2d");
+let G={nodes:[],edges:[]}, sim=null;
+function resize(){ cv.width=cv.clientWidth*devicePixelRatio; cv.height=cv.clientHeight*devicePixelRatio; }
+async function loadGraph(){
+  const g=await api("/v1/vault/graph");
+  resize();
+  const W=cv.width, H=cv.height;
+  G.nodes=g.nodes.map((n,i)=>({...n, x:W/2+Math.cos(i)*120*devicePixelRatio, y:H/2+Math.sin(i*1.7)*120*devicePixelRatio, vx:0, vy:0}));
+  const idx=Object.fromEntries(G.nodes.map((n,i)=>[n.id,i]));
+  G.edges=g.edges.map(e=>({...e, a:idx[e.source], b:idx[e.target]})).filter(e=>e.a!=null&&e.b!=null);
+  if(sim) cancelAnimationFrame(sim); step();
+}
+function step(){
+  const W=cv.width, H=cv.height, N=G.nodes;
+  for(let i=0;i<N.length;i++){
+    N[i].vx+=(W/2-N[i].x)*0.002; N[i].vy+=(H/2-N[i].y)*0.002; // gravity
+    for(let j=0;j<N.length;j++){ if(i===j)continue;
+      let dx=N[i].x-N[j].x, dy=N[i].y-N[j].y, d=Math.hypot(dx,dy)||1;
+      let f=3200*devicePixelRatio/(d*d); N[i].vx+=dx/d*f; N[i].vy+=dy/d*f; } // repel
+  }
+  for(const e of G.edges){ const a=N[e.a],b=N[e.b];
+    let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy)||1, rest=110*devicePixelRatio;
+    let f=(d-rest)*(e.type==="link"?0.02:0.008);
+    a.vx+=dx/d*f; a.vy+=dy/d*f; b.vx-=dx/d*f; b.vy-=dy/d*f; }
+  for(const n of N){ n.x+=n.vx*=0.85; n.y+=n.vy*=0.85; }
+  cx.clearRect(0,0,W,H);
+  for(const e of G.edges){ const a=N[e.a],b=N[e.b];
+    cx.beginPath(); cx.moveTo(a.x,a.y); cx.lineTo(b.x,b.y);
+    if(e.type==="link"){ cx.strokeStyle="rgba(16,185,129,.6)"; cx.lineWidth=1.6*devicePixelRatio; cx.setLineDash([]); }
+    else { cx.strokeStyle="rgba(140,140,140,.35)"; cx.lineWidth=1*devicePixelRatio; cx.setLineDash([4*devicePixelRatio,4*devicePixelRatio]); }
+    cx.stroke(); cx.setLineDash([]);
+  }
+  for(const n of N){
+    cx.fillStyle=n.type==="note"?"#10b981":"#ef4444";
+    const s=6*devicePixelRatio;
+    if(n.type==="note"){ cx.beginPath(); cx.arc(n.x,n.y,s,0,7); cx.fill(); }
+    else cx.fillRect(n.x-s,n.y-s,s*2,s*2);
+    cx.fillStyle="#cfcfcf"; cx.font=`${11*devicePixelRatio}px monospace`;
+    cx.fillText(n.label, n.x+s+3*devicePixelRatio, n.y+4*devicePixelRatio);
+  }
+  sim=requestAnimationFrame(step);
+}
+cv.addEventListener("click", async ev=>{
+  const r=cv.getBoundingClientRect();
+  const mx=(ev.clientX-r.left)*devicePixelRatio, my=(ev.clientY-r.top)*devicePixelRatio;
+  const hit=G.nodes.find(n=>Math.hypot(n.x-mx,n.y-my)<12*devicePixelRatio);
+  if(!hit){return;}
+  if(hit.type!=="note"){ $("#vPick").textContent=`Source: ${hit.label}`; return; }
+  const id=hit.id.split(":")[1];
+  $("#vPick").textContent=`Suggested links for [[${hit.label}]]…`;
+  const {suggestions}=await api("/v1/vault/suggest?note_id="+id);
+  $("#vPick").innerHTML= suggestions.length
+    ? `Suggested links for <b>${hit.label}</b>: `+suggestions.map(s=>`${s.kind==="note"?"●":"■"} ${s.title} <span style="color:var(--soft)">(${s.score})</span>`).join(" · ")
+    : `No related items yet for ${hit.label}.`;
+});
+$("#vRefresh").onclick=loadGraph;
+// load the graph the first time the Vault tab is opened
+document.querySelector('nav [data-tab="vault"]').addEventListener("click",()=>{ if(!G.nodes.length) loadGraph(); });
+
+// swarm
+api("/v1/agents").then(a=>{
+  $("#agentSel").innerHTML=a.map(x=>`<option value="${x.id}">${x.id}</option>`).join("");
+});
+$("#taskRun").onclick=async()=>{
+  const agent=$("#agentSel").value, prompt=$("#taskIn").value.trim(); if(!prompt)return;
+  $("#taskOut").textContent="—"; $("#taskStatus").textContent="queued"; $("#taskStatus").className="pill run";
+  const {task_id}=await api("/v1/tasks",{agent,prompt});
+  const poll=setInterval(async()=>{
+    const t=await api("/v1/tasks/"+task_id);
+    $("#taskStatus").textContent=t.status;
+    if(t.status==="done"||t.status==="error"){clearInterval(poll);$("#taskOut").textContent=t.result;$("#taskStatus").className="pill";}
+  },3000);
+};
+</script>
+</body>
+</html>
